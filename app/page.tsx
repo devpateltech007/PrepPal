@@ -126,9 +126,9 @@ function PrepPalContent() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 border-emerald-200">
-                Beta
-              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                Logout
+              </Button>
 
               {user && (
                 <DropdownMenu>
