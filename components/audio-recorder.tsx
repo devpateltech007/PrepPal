@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText } from "lucide-react"
+import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText, Save } from "lucide-react"
+import { transcriptionAPI, Transcription } from "@/lib/api"
+import { toast } from "@/hooks/use-toast"
 
 interface TranscriptionSegment {
   id: string
@@ -18,20 +20,56 @@ interface AudioTranscriberProps {
   onTranscriptionComplete?: (segments: TranscriptionSegment[]) => void
 }
 
-export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps) {
+export default function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps) {
+  const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [transcriptionTime, setTranscriptionTime] = useState(0)
-  const [audioLevel, setAudioLevel] = useState(0)
-  const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
-
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [transcriptionTime, setTranscriptionTime] = useState(0)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [recentTranscriptions, setRecentTranscriptions] = useState<Transcription[]>([])
+  const [loadingTranscriptions, setLoadingTranscriptions] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [savedTranscriptionId, setSavedTranscriptionId] = useState<string | null>(null)
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaTranscriberRef = useRef<MediaRecorder | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const transcriptionIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const recognitionRef = useRef<any>(null)
+
+  // Load recent transcriptions from API
+  useEffect(() => {
+    const loadRecentTranscriptions = async () => {
+      try {
+        setLoadingTranscriptions(true)
+        const transcriptions = await transcriptionAPI.getTranscriptions()
+        // Get the 3 most recent transcriptions
+        const recent = transcriptions.slice(0, 3)
+        setRecentTranscriptions(recent)
+      } catch (error) {
+        console.error('Failed to load recent transcriptions:', error)
+        toast({
+          title: "Error loading transcriptions",
+          description: "Failed to load recent transcriptions",
+          variant: "destructive"
+        })
+      } finally {
+        setLoadingTranscriptions(false)
+      }
+    }
+
+    loadRecentTranscriptions()
+  }, [])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -184,6 +222,50 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
     URL.revokeObjectURL(url)
   }
 
+  const saveTranscription = async () => {
+    if (transcriptionSegments.length === 0) {
+      toast({
+        title: "No content to save",
+        description: "Please record some content before saving.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      
+      // Combine all transcription segments into full text
+      const fullText = transcriptionSegments.map(segment => segment.text).join(" ")
+      
+      // Save transcription using the API
+      const savedTranscription = await transcriptionAPI.createTranscription(fullText, transcriptionTime)
+      
+      setSavedTranscriptionId(savedTranscription.id)
+      
+      toast({
+        title: "Transcription saved!",
+        description: `Your transcription has been saved successfully.`,
+        variant: "default"
+      })
+      
+      // Refresh recent transcriptions
+      const transcriptions = await transcriptionAPI.getTranscriptions()
+      const recent = transcriptions.slice(0, 3)
+      setRecentTranscriptions(recent)
+      
+    } catch (error) {
+      console.error('Failed to save transcription:', error)
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "Failed to save transcription. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -279,12 +361,21 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
               {transcriptionSegments.length > 0 && (
                 <div className="flex gap-2">
                   <Button 
-                    onClick={() => window.location.href = `/transcription/current-session`} 
+                    onClick={() => window.location.href = savedTranscriptionId ? `/transcription/${savedTranscriptionId}` : `/transcription/current-session`} 
                     variant="default" 
                     size="sm"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     View Details
+                  </Button>
+                  <Button 
+                    onClick={saveTranscription} 
+                    variant={savedTranscriptionId ? "secondary" : "default"} 
+                    size="sm"
+                    disabled={isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? "Saving..." : savedTranscriptionId ? "Saved" : "Save"}
                   </Button>
                   <Button onClick={copyTranscription} variant="outline" size="sm">
                     <Copy className="w-4 h-4 mr-2" />
@@ -333,28 +424,36 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { id: "cs101-algorithms", title: "Computer Science 101 - Algorithms", date: "Today, 2:30 PM", duration: "45:23" },
-              { id: "math-linear-algebra", title: "Mathematics - Linear Algebra", date: "Yesterday, 10:00 AM", duration: "52:15" },
-              { id: "physics-quantum", title: "Physics - Quantum Mechanics", date: "Dec 3, 3:15 PM", duration: "38:42" },
-            ].map((transcription) => (
-              <div 
-                key={transcription.id} 
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                onClick={() => window.location.href = `/transcription/${transcription.id}`}
-              >
-                <div>
-                  <h4 className="font-medium text-foreground">{transcription.title}</h4>
-                  <p className="text-sm text-muted-foreground">{transcription.date}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-mono text-foreground">{transcription.duration}</p>
-                  <Badge variant="secondary" className="text-xs">
-                    Transcribed
-                  </Badge>
-                </div>
+            {loadingTranscriptions ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Loading recent transcriptions...
               </div>
-            ))}
+            ) : recentTranscriptions.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No transcriptions yet. Start recording to create your first transcription.
+              </div>
+            ) : (
+              recentTranscriptions.map((transcription) => (
+                <div 
+                  key={transcription.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => window.location.href = `/transcription/${transcription.id}`}
+                >
+                  <div>
+                    <h4 className="font-medium text-foreground">{transcription.title}</h4>
+                    <p className="text-sm text-muted-foreground">{transcription.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono text-foreground">
+                      {Math.floor(transcription.duration / 60)}:{(transcription.duration % 60).toString().padStart(2, '0')}
+                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {transcription.status === 'completed' ? 'Transcribed' : transcription.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

@@ -12,26 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Play, Pause, Download, Copy, Save, Edit3, Clock, Calendar, FileText } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
-
-interface TranscriptionSegment {
-  id: string
-  timestamp: number
-  text: string
-}
-
-interface Transcription {
-  id: string
-  title: string
-  date: string
-  duration: number
-  segments: TranscriptionSegment[]
-  summary?: string
-  tags: string[]
-  audioUrl?: string
-  status: "processing" | "completed" | "error"
-  createdAt: string
-  updatedAt: string
-}
+import { transcriptionAPI, transcriptionExtendedAPI, Transcription, TranscriptionSegment } from "@/lib/api"
 
 export default function TranscriptionDetailPage() {
   return (
@@ -55,41 +36,43 @@ function TranscriptionDetailContent() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
 
-  // Mock data - replace with actual API call
+  // Load transcription data from API
   useEffect(() => {
-    const mockTranscription: Transcription = {
-      id: transcriptionId,
-      title: "Lecture on Machine Learning Fundamentals",
-      date: "2025-09-06",
-      duration: 3600, // 1 hour in seconds
-      segments: [
-        {
-          id: "1",
-          timestamp: 0,
-          text: "Welcome to today's lecture on machine learning fundamentals. We'll be covering supervised and unsupervised learning algorithms.",
-        },
-        {
-          id: "2",
-          timestamp: 30,
-          text: "Let's start with supervised learning. This is a type of machine learning where we train our model using labeled data.",
-        },
-        {
-          id: "3",
-          timestamp: 60,
-          text: "The key difference between supervised and unsupervised learning is the presence of target variables in the training data.",
+    const loadTranscription = async () => {
+      try {
+        setLoading(true)
+        
+        // Fetch transcription from API
+        const transcriptionData = await transcriptionAPI.getTranscription(transcriptionId)
+        
+        // Fetch metadata (title, summary, tags) from extended API
+        const metadata = await transcriptionExtendedAPI.getMetadata(transcriptionId)
+        
+        // Merge API data with metadata
+        const fullTranscription: Transcription = {
+          ...transcriptionData,
+          title: metadata.title || transcriptionData.title,
+          summary: metadata.summary || transcriptionData.summary || "",
+          tags: metadata.tags || transcriptionData.tags || []
         }
-      ],
-      summary: "Introduction to machine learning covering supervised and unsupervised learning algorithms with practical examples.",
-      tags: ["machine-learning", "algorithms", "supervised-learning"],
-      status: "completed",
-      createdAt: "2024-01-15T10:00:00Z",
-      updatedAt: "2024-01-15T11:00:00Z"
+        
+        setTranscription(fullTranscription)
+        setEditedTitle(fullTranscription.title)
+        setEditedSummary(fullTranscription.summary || "")
+        
+      } catch (error) {
+        console.error('Failed to load transcription:', error)
+        toast({
+          title: "Error loading transcription",
+          description: error instanceof Error ? error.message : "Failed to load transcription data",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setTranscription(mockTranscription)
-    setEditedTitle(mockTranscription.title)
-    setEditedSummary(mockTranscription.summary || "")
-    setLoading(false)
+    loadTranscription()
   }, [transcriptionId])
 
   const formatTime = (seconds: number) => {
@@ -107,23 +90,39 @@ function TranscriptionDetailContent() {
     return `${mins}m`
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!transcription) return
     
-    // Update transcription with edited values
-    const updatedTranscription = {
-      ...transcription,
-      title: editedTitle,
-      summary: editedSummary,
-      updatedAt: new Date().toISOString()
+    try {
+      // Save metadata (title, summary, tags) to extended API
+      await transcriptionExtendedAPI.updateMetadata(transcription.id, {
+        title: editedTitle,
+        summary: editedSummary,
+        tags: transcription.tags
+      })
+      
+      // Update local state
+      const updatedTranscription = {
+        ...transcription,
+        title: editedTitle,
+        summary: editedSummary,
+        updatedAt: new Date().toISOString()
+      }
+      
+      setTranscription(updatedTranscription)
+      setIsEditing(false)
+      toast({
+        title: "Transcription updated",
+        description: "Your changes have been saved successfully."
+      })
+    } catch (error) {
+      console.error('Failed to save transcription:', error)
+      toast({
+        title: "Error saving changes",
+        description: error instanceof Error ? error.message : "Failed to save changes",
+        variant: "destructive"
+      })
     }
-    
-    setTranscription(updatedTranscription)
-    setIsEditing(false)
-    toast({
-      title: "Transcription updated",
-      description: "Your changes have been saved successfully."
-    })
   }
 
   const handleCancel = () => {
@@ -133,27 +132,59 @@ function TranscriptionDetailContent() {
     setIsEditing(false)
   }
 
-  const addTag = () => {
+  const addTag = async () => {
     if (!newTag.trim() || !transcription) return
     
-    const updatedTranscription = {
-      ...transcription,
-      tags: [...transcription.tags, newTag.trim()]
-    }
+    const updatedTags = [...transcription.tags, newTag.trim()]
     
-    setTranscription(updatedTranscription)
-    setNewTag("")
+    try {
+      // Save tags to extended API
+      await transcriptionExtendedAPI.updateMetadata(transcription.id, {
+        tags: updatedTags
+      })
+      
+      const updatedTranscription = {
+        ...transcription,
+        tags: updatedTags
+      }
+      
+      setTranscription(updatedTranscription)
+      setNewTag("")
+    } catch (error) {
+      console.error('Failed to add tag:', error)
+      toast({
+        title: "Error adding tag",
+        description: "Failed to save tag",
+        variant: "destructive"
+      })
+    }
   }
 
-  const removeTag = (tagToRemove: string) => {
+  const removeTag = async (tagToRemove: string) => {
     if (!transcription) return
     
-    const updatedTranscription = {
-      ...transcription,
-      tags: transcription.tags.filter(tag => tag !== tagToRemove)
-    }
+    const updatedTags = transcription.tags.filter(tag => tag !== tagToRemove)
     
-    setTranscription(updatedTranscription)
+    try {
+      // Save tags to extended API
+      await transcriptionExtendedAPI.updateMetadata(transcription.id, {
+        tags: updatedTags
+      })
+      
+      const updatedTranscription = {
+        ...transcription,
+        tags: updatedTags
+      }
+      
+      setTranscription(updatedTranscription)
+    } catch (error) {
+      console.error('Failed to remove tag:', error)
+      toast({
+        title: "Error removing tag",
+        description: "Failed to remove tag",
+        variant: "destructive"
+      })
+    }
   }
 
   const copyTranscription = () => {

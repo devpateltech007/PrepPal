@@ -21,6 +21,7 @@ def initialize_firebase():
 class TranscriptionCreate(BaseModel):
     text: str
     duration: float  # in seconds
+    subject: Optional[str] = None
 
 class TranscriptionResponse(BaseModel):
     id: str
@@ -28,6 +29,7 @@ class TranscriptionResponse(BaseModel):
     duration: float
     created: str
     uid: str
+    subject: Optional[str] = None
 
 class TranscriptionUpdate(BaseModel):
     text: Optional[str] = None
@@ -98,7 +100,7 @@ async def create_transcription(
             "duration": transcription.duration,
             "created": firestore.SERVER_TIMESTAMP,
             "uid": uid,
-            "subject":transcription.subject
+            "subject": transcription.subject
         }
         
         # Add to Firestore
@@ -114,7 +116,8 @@ async def create_transcription(
             text=doc_data["text"],
             duration=doc_data["duration"],
             created=format_timestamp(doc_data["created"]),
-            uid=doc_data["uid"]
+            uid=doc_data["uid"],
+            subject=doc_data.get("subject")
         )
         
     except Exception as e:
@@ -140,7 +143,7 @@ async def get_user_transcriptions(
                 duration=data["duration"],
                 created=format_timestamp(data["created"]),
                 uid=data["uid"],
-                subject=data["subject"]
+                subject=data.get("subject")
             ))
         
         return transcriptions
@@ -173,7 +176,7 @@ async def get_transcription(
             duration=data["duration"],
             created=format_timestamp(data["created"]),
             uid=data["uid"],
-            subject=data["subject"]
+            subject=data.get("subject")
         )
         
     except HTTPException:
@@ -220,7 +223,8 @@ async def update_transcription(
                 text=updated_data["text"],
                 duration=updated_data["duration"],
                 created=format_timestamp(updated_data["created"]),
-                uid=updated_data["uid"]
+                uid=updated_data["uid"],
+                subject=updated_data.get("subject")
             )
         
         # Return existing data if no updates
@@ -230,7 +234,7 @@ async def update_transcription(
             duration=data["duration"],
             created=format_timestamp(data["created"]),
             uid=data["uid"],
-            subject=data["subject"]
+            subject=data.get("subject")
         )
         
     except HTTPException:
