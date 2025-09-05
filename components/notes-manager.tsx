@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { useNotes } from "@/components/notes-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -45,6 +47,8 @@ interface NotesManagerProps {
 }
 
 export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerProps) {
+  const router = useRouter()
+  const { toggleStarNote, addNote } = useNotes()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSubject, setSelectedSubject] = useState<string>("all")
   const [showStarredOnly, setShowStarredOnly] = useState(false)
@@ -68,10 +72,6 @@ export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerPro
     return matchesSearch && matchesSubject && matchesStarred
   })
 
-  const toggleStarNote = (noteId: string) => {
-    const updatedNotes = notes.map((note) => (note.id === noteId ? { ...note, isStarred: !note.isStarred } : note))
-    onNotesChange(updatedNotes)
-  }
 
   const addNewNote = () => {
     if (newNote.title && newNote.content) {
@@ -91,7 +91,7 @@ export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerPro
         source: "manual",
       }
 
-      onNotesChange([note, ...notes])
+      addNote(note)
       setNewNote({ title: "", content: "", subject: "", tags: "" })
       setIsAddingNote(false)
     }
@@ -281,7 +281,11 @@ export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerPro
                     ))}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => router.push(`/edit-note/${note.id}`)}
+                    >
                       <Edit3 className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
