@@ -42,8 +42,8 @@ function EditNoteContent() {
 
   const [note, setNote] = useState<Note | null>(null)
   const [loading, setLoading] = useState(true)
-  const [newTag, setNewTag] = useState("")
-  const [newKeyPoint, setNewKeyPoint] = useState("")
+  // const [newTag, setNewTag] = useState("")
+  // const [newKeyPoint, setNewKeyPoint] = useState("")
   const [customSubject, setCustomSubject] = useState("")
 
   useEffect(() => {
@@ -65,51 +65,51 @@ function EditNoteContent() {
     router.push("/")
   }
 
-  const addTag = () => {
-    if (newTag.trim() && note && !note.tags.includes(newTag.trim())) {
-      setNote({
-        ...note,
-        tags: [...note.tags, newTag.trim()]
-      })
-      setNewTag("")
-    }
-  }
+  // const addTag = () => {
+  //   if (newTag.trim() && note && !note.tags.includes(newTag.trim())) {
+  //     setNote({
+  //       ...note,
+  //       tags: [...note.tags, newTag.trim()]
+  //     })
+  //     setNewTag("")
+  //   }
+  // }
 
-  const removeTag = (tagToRemove: string) => {
-    if (!note) return
-    setNote({
-      ...note,
-      tags: note.tags.filter(tag => tag !== tagToRemove)
-    })
-  }
+  // const removeTag = (tagToRemove: string) => {
+  //   if (!note) return
+  //   setNote({
+  //     ...note,
+  //     tags: note.tags.filter(tag => tag !== tagToRemove)
+  //   })
+  // }
 
-  const addKeyPoint = () => {
-    if (newKeyPoint.trim() && note) {
-      setNote({
-        ...note,
-        keyPoints: [...note.keyPoints, newKeyPoint.trim()]
-      })
-      setNewKeyPoint("")
-    }
-  }
+  // const addKeyPoint = () => {
+  //   if (newKeyPoint.trim() && note) {
+  //     setNote({
+  //       ...note,
+  //       keyPoints: [...note.keyPoints, newKeyPoint.trim()]
+  //     })
+  //     setNewKeyPoint("")
+  //   }
+  // }
 
-  const removeKeyPoint = (index: number) => {
-    if (!note) return
-    setNote({
-      ...note,
-      keyPoints: note.keyPoints.filter((_, i) => i !== index)
-    })
-  }
+  // const removeKeyPoint = (index: number) => {
+  //   if (!note) return
+  //   setNote({
+  //     ...note,
+  //     keyPoints: note.keyPoints.filter((_, i) => i !== index)
+  //   })
+  // }
 
-  const updateKeyPoint = (index: number, value: string) => {
-    if (!note) return
-    const updatedKeyPoints = [...note.keyPoints]
-    updatedKeyPoints[index] = value
-    setNote({
-      ...note,
-      keyPoints: updatedKeyPoints
-    })
-  }
+  // const updateKeyPoint = (index: number, value: string) => {
+  //   if (!note) return
+  //   const updatedKeyPoints = [...note.keyPoints]
+  //   updatedKeyPoints[index] = value
+  //   setNote({
+  //     ...note,
+  //     keyPoints: updatedKeyPoints
+  //   })
+  // }
 
   if (loading) {
     return (
@@ -237,7 +237,7 @@ function EditNoteContent() {
           </Card>
 
           {/* Tags */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Tags</CardTitle>
             </CardHeader>
@@ -265,10 +265,10 @@ function EditNoteContent() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* Key Points */}
-          <Card>
+          {/* <Card>
             <CardHeader>
               <CardTitle>Key Points</CardTitle>
             </CardHeader>
@@ -303,7 +303,7 @@ function EditNoteContent() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
       </div>
     </div>
