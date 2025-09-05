@@ -23,8 +23,8 @@ interface Note {
   isStarred: boolean
   keyPoints: string[]
   summary: string
-  source: "recording" | "manual"
-  recordingId?: string
+  source: "transcription" | "manual"
+  transcriptionId?: string
 }
 
 interface Subject {
@@ -98,7 +98,7 @@ function PrepPalContent() {
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="record" className="flex items-center gap-2">
               <Mic className="w-4 h-4" />
-              Record
+              Transcribe
             </TabsTrigger>
             <TabsTrigger value="notes" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />

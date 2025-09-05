@@ -29,8 +29,8 @@ interface Note {
   isStarred: boolean
   keyPoints: string[]
   summary: string
-  source: "recording" | "manual"
-  recordingId?: string
+  source: "transcription" | "manual"
+  transcriptionId?: string
 }
 
 interface Subject {
@@ -217,7 +217,7 @@ export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerPro
                 <p className="text-muted-foreground">
                   {searchQuery || selectedSubject !== "all" || showStarredOnly
                     ? "No notes match your current filters"
-                    : "No notes yet. Start recording lectures or add notes manually."}
+                    : "No notes yet. Start transcribing lectures or add notes manually."}
                 </p>
               </div>
             </CardContent>
@@ -248,7 +248,7 @@ export function NotesManager({ notes, subjects, onNotesChange }: NotesManagerPro
                         {note.date}
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        {note.source === "recording" ? "From Recording" : "Manual"}
+                        {note.source === "transcription" ? "From Transcription" : "Manual"}
                       </Badge>
                     </div>
                   </div>

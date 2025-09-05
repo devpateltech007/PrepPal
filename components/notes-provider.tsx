@@ -12,8 +12,8 @@ interface Note {
   isStarred: boolean
   keyPoints: string[]
   summary: string
-  source: "recording" | "manual"
-  recordingId?: string
+  source: "transcription" | "manual"
+  transcriptionId?: string
 }
 
 interface Subject {
@@ -50,8 +50,8 @@ const initialNotes: Note[] = [
       "Used for both time and space complexity",
     ],
     summary: "Introduction to Big O notation and algorithm complexity analysis",
-    source: "recording",
-    recordingId: "rec-1",
+    source: "transcription",
+    transcriptionId: "rec-1",
   },
   {
     id: "2",
@@ -67,8 +67,8 @@ const initialNotes: Note[] = [
       "Inverse exists for non-singular square matrices",
     ],
     summary: "Fundamental properties of matrix operations and inverses",
-    source: "recording",
-    recordingId: "rec-2",
+    source: "transcription",
+    transcriptionId: "rec-2",
   },
   {
     id: "3",
@@ -84,8 +84,8 @@ const initialNotes: Note[] = [
       "Observation affects behavior",
     ],
     summary: "Understanding wave-particle duality in quantum mechanics",
-    source: "recording",
-    recordingId: "rec-3",
+    source: "transcription",
+    transcriptionId: "rec-3",
   },
 ]
 

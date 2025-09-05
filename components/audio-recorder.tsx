@@ -14,20 +14,20 @@ interface TranscriptionSegment {
   isFinal: boolean
 }
 
-interface AudioRecorderProps {
+interface AudioTranscriberProps {
   onTranscriptionComplete?: (segments: TranscriptionSegment[]) => void
 }
 
-export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
-  const [isRecording, setIsRecording] = useState(false)
+export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps) {
+  const [isTranscribing, setIsTranscribing] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [recordingTime, setRecordingTime] = useState(0)
+  const [transcriptionTime, setTranscriptionTime] = useState(0)
   const [audioLevel, setAudioLevel] = useState(0)
   const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([])
-  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
   const [currentTranscript, setCurrentTranscript] = useState("")
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const mediaTranscriberRef = useRef<MediaRecorder | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -40,9 +40,9 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
   }
 
   useEffect(() => {
-    if (isRecording && !isPaused) {
+    if (isTranscribing && !isPaused) {
       intervalRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1)
+        setTranscriptionTime((prev) => prev + 1)
       }, 1000)
     } else {
       if (intervalRef.current) {
@@ -55,7 +55,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
         clearInterval(intervalRef.current)
       }
     }
-  }, [isRecording, isPaused])
+  }, [isTranscribing, isPaused])
 
   const setupSpeechRecognition = () => {
     if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
@@ -87,7 +87,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
           const newSegment: TranscriptionSegment = {
             id: Date.now().toString(),
             text: finalTranscript.trim(),
-            timestamp: recordingTime,
+            timestamp: transcriptionTime,
             isFinal: true,
           }
           setTranscriptionSegments((prev) => [...prev, newSegment])
@@ -102,26 +102,26 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
       }
 
       recognitionRef.current.onend = () => {
-        setIsTranscribing(false)
-        if (isRecording && !isPaused) {
+        setIsProcessing(false)
+        if (isTranscribing && !isPaused) {
           recognitionRef.current?.start()
         }
       }
     }
   }
 
-  const startRecording = async () => {
+  const startTranscription = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-      mediaRecorderRef.current = new MediaRecorder(stream)
+      mediaTranscriberRef.current = new MediaRecorder(stream)
       audioContextRef.current = new AudioContext()
       const source = audioContextRef.current.createMediaStreamSource(stream)
       analyserRef.current = audioContextRef.current.createAnalyser()
       source.connect(analyserRef.current)
 
       const updateAudioLevel = () => {
-        if (analyserRef.current && isRecording) {
+        if (analyserRef.current && isTranscribing) {
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
           analyserRef.current.getByteFrequencyData(dataArray)
           const average = dataArray.reduce((a, b) => a + b) / dataArray.length
@@ -130,13 +130,13 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
         }
       }
 
-      setIsRecording(true)
-      setRecordingTime(0)
+      setIsTranscribing(true)
+      setTranscriptionTime(0)
       setupSpeechRecognition()
       recognitionRef.current?.start()
       updateAudioLevel()
     } catch (error) {
-      console.error("Error starting recording:", error)
+      console.error("Error starting transcription:", error)
     }
   }
 
@@ -149,13 +149,13 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
     }
   }
 
-  const stopRecording = () => {
-    setIsRecording(false)
+  const stopTranscription = () => {
+    setIsTranscribing(false)
     setIsPaused(false)
     recognitionRef.current?.stop()
 
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop()
+    if (mediaTranscriberRef.current) {
+      mediaTranscriberRef.current.stop()
     }
 
     if (audioContextRef.current) {
@@ -188,8 +188,8 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Lecture Recording</CardTitle>
-          <CardDescription>Record your lecture and PrepPal will transcribe it automatically</CardDescription>
+          <CardTitle>Lecture Transcription</CardTitle>
+          <CardDescription>Transcribe your lecture in real-time with PrepPal's AI transcription</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-center">
@@ -199,12 +199,12 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
                   className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center transition-all duration-150"
                   style={{
                     transform: `scale(${1 + (audioLevel / 255) * 0.3})`,
-                    backgroundColor: isRecording
+                    backgroundColor: isTranscribing
                       ? `oklch(0.45 0.15 160 / ${0.1 + (audioLevel / 255) * 0.3})`
                       : undefined,
                   }}
                 >
-                  {isRecording ? (
+                  {isTranscribing ? (
                     <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center animate-pulse">
                       <Mic className="w-8 h-8 text-primary-foreground" />
                     </div>
@@ -213,7 +213,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
                   )}
                 </div>
               </div>
-              {isRecording && (
+              {isTranscribing && (
                 <div className="absolute -top-2 -right-2">
                   <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
                 </div>
@@ -221,12 +221,12 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
             </div>
           </div>
 
-          {isRecording && (
+          {isTranscribing && (
             <div className="text-center space-y-2">
-              <div className="text-2xl font-mono font-bold text-primary">{formatTime(recordingTime)}</div>
+              <div className="text-2xl font-mono font-bold text-primary">{formatTime(transcriptionTime)}</div>
               <div className="flex items-center justify-center gap-2">
                 <p className="text-sm text-muted-foreground">
-                  {isPaused ? "Recording paused" : "Recording in progress..."}
+                  {isPaused ? "Transcription paused" : "Transcribing in progress..."}
                 </p>
                 {isTranscribing && (
                   <Badge variant="secondary" className="bg-accent/10 text-accent">
@@ -238,10 +238,10 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
           )}
 
           <div className="flex items-center justify-center gap-4">
-            {!isRecording ? (
-              <Button onClick={startRecording} size="lg" className="bg-primary hover:bg-primary/90">
+            {!isTranscribing ? (
+              <Button onClick={startTranscription} size="lg" className="bg-primary hover:bg-primary/90">
                 <Mic className="w-5 h-5 mr-2" />
-                Start Recording
+                Start Transcription
               </Button>
             ) : (
               <div className="flex gap-3">
@@ -258,7 +258,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
                     </>
                   )}
                 </Button>
-                <Button onClick={stopRecording} variant="destructive" size="lg">
+                <Button onClick={stopTranscription} variant="destructive" size="lg">
                   <Square className="w-5 h-5 mr-2" />
                   Stop
                 </Button>
@@ -268,7 +268,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
         </CardContent>
       </Card>
 
-      {(isRecording || transcriptionSegments.length > 0) && (
+      {(isTranscribing || transcriptionSegments.length > 0) && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -304,7 +304,7 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
                 {currentTranscript && (
                   <div className="flex gap-3">
                     <Badge variant="outline" className="text-xs shrink-0 mt-1 bg-accent/10">
-                      {formatTime(recordingTime)}
+                      {formatTime(transcriptionTime)}
                     </Badge>
                     <p className="text-sm leading-relaxed text-muted-foreground italic">{currentTranscript}</p>
                   </div>
@@ -320,8 +320,8 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Recordings</CardTitle>
-          <CardDescription>Your latest lecture recordings</CardDescription>
+          <CardTitle>Recent Transcriptions</CardTitle>
+          <CardDescription>Your latest lecture transcriptions</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -329,14 +329,14 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioRecorderProps) {
               { title: "Computer Science 101 - Algorithms", date: "Today, 2:30 PM", duration: "45:23" },
               { title: "Mathematics - Linear Algebra", date: "Yesterday, 10:00 AM", duration: "52:15" },
               { title: "Physics - Quantum Mechanics", date: "Dec 3, 3:15 PM", duration: "38:42" },
-            ].map((recording, index) => (
+            ].map((transcription, index) => (
               <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
-                  <h4 className="font-medium text-foreground">{recording.title}</h4>
-                  <p className="text-sm text-muted-foreground">{recording.date}</p>
+                  <h4 className="font-medium text-foreground">{transcription.title}</h4>
+                  <p className="text-sm text-muted-foreground">{transcription.date}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-mono text-foreground">{recording.duration}</p>
+                  <p className="text-sm font-mono text-foreground">{transcription.duration}</p>
                   <Badge variant="secondary" className="text-xs">
                     Transcribed
                   </Badge>
