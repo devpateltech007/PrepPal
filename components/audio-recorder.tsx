@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText } from "lucide-react"
+import { transcriptionAPI, Transcription } from "@/lib/api"
+import { toast } from "@/hooks/use-toast"
 
 interface TranscriptionSegment {
   id: string
@@ -18,20 +20,54 @@ interface AudioTranscriberProps {
   onTranscriptionComplete?: (segments: TranscriptionSegment[]) => void
 }
 
-export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps) {
+export default function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps) {
+  const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
-  const [transcriptionTime, setTranscriptionTime] = useState(0)
-  const [audioLevel, setAudioLevel] = useState(0)
-  const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [transcriptionSegments, setTranscriptionSegments] = useState<TranscriptionSegment[]>([])
   const [currentTranscript, setCurrentTranscript] = useState("")
-
+  const [recordingTime, setRecordingTime] = useState(0)
+  const [transcriptionTime, setTranscriptionTime] = useState(0)
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [recentTranscriptions, setRecentTranscriptions] = useState<Transcription[]>([])
+  const [loadingTranscriptions, setLoadingTranscriptions] = useState(true)
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaTranscriberRef = useRef<MediaRecorder | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const transcriptionIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const recognitionRef = useRef<any>(null)
+
+  // Load recent transcriptions from API
+  useEffect(() => {
+    const loadRecentTranscriptions = async () => {
+      try {
+        setLoadingTranscriptions(true)
+        const transcriptions = await transcriptionAPI.getTranscriptions()
+        // Get the 3 most recent transcriptions
+        const recent = transcriptions.slice(0, 3)
+        setRecentTranscriptions(recent)
+      } catch (error) {
+        console.error('Failed to load recent transcriptions:', error)
+        toast({
+          title: "Error loading transcriptions",
+          description: "Failed to load recent transcriptions",
+          variant: "destructive"
+        })
+      } finally {
+        setLoadingTranscriptions(false)
+      }
+    }
+
+    loadRecentTranscriptions()
+  }, [])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -333,28 +369,36 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { id: "cs101-algorithms", title: "Computer Science 101 - Algorithms", date: "Today, 2:30 PM", duration: "45:23" },
-              { id: "math-linear-algebra", title: "Mathematics - Linear Algebra", date: "Yesterday, 10:00 AM", duration: "52:15" },
-              { id: "physics-quantum", title: "Physics - Quantum Mechanics", date: "Dec 3, 3:15 PM", duration: "38:42" },
-            ].map((transcription) => (
-              <div 
-                key={transcription.id} 
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
-                onClick={() => window.location.href = `/transcription/${transcription.id}`}
-              >
-                <div>
-                  <h4 className="font-medium text-foreground">{transcription.title}</h4>
-                  <p className="text-sm text-muted-foreground">{transcription.date}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-mono text-foreground">{transcription.duration}</p>
-                  <Badge variant="secondary" className="text-xs">
-                    Transcribed
-                  </Badge>
-                </div>
+            {loadingTranscriptions ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Loading recent transcriptions...
               </div>
-            ))}
+            ) : recentTranscriptions.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                No transcriptions yet. Start recording to create your first transcription.
+              </div>
+            ) : (
+              recentTranscriptions.map((transcription) => (
+                <div 
+                  key={transcription.id} 
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                  onClick={() => window.location.href = `/transcription/${transcription.id}`}
+                >
+                  <div>
+                    <h4 className="font-medium text-foreground">{transcription.title}</h4>
+                    <p className="text-sm text-muted-foreground">{transcription.date}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-mono text-foreground">
+                      {Math.floor(transcription.duration / 60)}:{(transcription.duration % 60).toString().padStart(2, '0')}
+                    </p>
+                    <Badge variant="secondary" className="text-xs">
+                      {transcription.status === 'completed' ? 'Transcribed' : transcription.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
