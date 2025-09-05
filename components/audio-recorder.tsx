@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText } from "lucide-react"
+import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText, Save } from "lucide-react"
 import { transcriptionAPI, Transcription } from "@/lib/api"
 import { toast } from "@/hooks/use-toast"
 
@@ -34,6 +34,8 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioTranscri
   const [audioLevel, setAudioLevel] = useState(0)
   const [recentTranscriptions, setRecentTranscriptions] = useState<Transcription[]>([])
   const [loadingTranscriptions, setLoadingTranscriptions] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [savedTranscriptionId, setSavedTranscriptionId] = useState<string | null>(null)
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const mediaTranscriberRef = useRef<MediaRecorder | null>(null)
@@ -220,6 +222,50 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioTranscri
     URL.revokeObjectURL(url)
   }
 
+  const saveTranscription = async () => {
+    if (transcriptionSegments.length === 0) {
+      toast({
+        title: "No content to save",
+        description: "Please record some content before saving.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    try {
+      setIsSaving(true)
+      
+      // Combine all transcription segments into full text
+      const fullText = transcriptionSegments.map(segment => segment.text).join(" ")
+      
+      // Save transcription using the API
+      const savedTranscription = await transcriptionAPI.createTranscription(fullText, transcriptionTime)
+      
+      setSavedTranscriptionId(savedTranscription.id)
+      
+      toast({
+        title: "Transcription saved!",
+        description: `Your transcription has been saved successfully.`,
+        variant: "default"
+      })
+      
+      // Refresh recent transcriptions
+      const transcriptions = await transcriptionAPI.getTranscriptions()
+      const recent = transcriptions.slice(0, 3)
+      setRecentTranscriptions(recent)
+      
+    } catch (error) {
+      console.error('Failed to save transcription:', error)
+      toast({
+        title: "Save failed",
+        description: error instanceof Error ? error.message : "Failed to save transcription. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -315,12 +361,21 @@ export default function AudioRecorder({ onTranscriptionComplete }: AudioTranscri
               {transcriptionSegments.length > 0 && (
                 <div className="flex gap-2">
                   <Button 
-                    onClick={() => window.location.href = `/transcription/current-session`} 
+                    onClick={() => window.location.href = savedTranscriptionId ? `/transcription/${savedTranscriptionId}` : `/transcription/current-session`} 
                     variant="default" 
                     size="sm"
                   >
                     <FileText className="w-4 h-4 mr-2" />
                     View Details
+                  </Button>
+                  <Button 
+                    onClick={saveTranscription} 
+                    variant={savedTranscriptionId ? "secondary" : "default"} 
+                    size="sm"
+                    disabled={isSaving}
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {isSaving ? "Saving..." : savedTranscriptionId ? "Saved" : "Save"}
                   </Button>
                   <Button onClick={copyTranscription} variant="outline" size="sm">
                     <Copy className="w-4 h-4 mr-2" />
