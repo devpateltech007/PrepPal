@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Mic, Play, Pause, Square, Copy, Download } from "lucide-react"
+import { Mic, MicOff, Square, Play, Pause, Download, Copy, Clock, FileText } from "lucide-react"
 
 interface TranscriptionSegment {
   id: string
@@ -278,6 +278,14 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
               </div>
               {transcriptionSegments.length > 0 && (
                 <div className="flex gap-2">
+                  <Button 
+                    onClick={() => window.location.href = `/transcription/current-session`} 
+                    variant="default" 
+                    size="sm"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    View Details
+                  </Button>
                   <Button onClick={copyTranscription} variant="outline" size="sm">
                     <Copy className="w-4 h-4 mr-2" />
                     Copy
@@ -326,11 +334,15 @@ export function AudioRecorder({ onTranscriptionComplete }: AudioTranscriberProps
         <CardContent>
           <div className="space-y-3">
             {[
-              { title: "Computer Science 101 - Algorithms", date: "Today, 2:30 PM", duration: "45:23" },
-              { title: "Mathematics - Linear Algebra", date: "Yesterday, 10:00 AM", duration: "52:15" },
-              { title: "Physics - Quantum Mechanics", date: "Dec 3, 3:15 PM", duration: "38:42" },
-            ].map((transcription, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+              { id: "cs101-algorithms", title: "Computer Science 101 - Algorithms", date: "Today, 2:30 PM", duration: "45:23" },
+              { id: "math-linear-algebra", title: "Mathematics - Linear Algebra", date: "Yesterday, 10:00 AM", duration: "52:15" },
+              { id: "physics-quantum", title: "Physics - Quantum Mechanics", date: "Dec 3, 3:15 PM", duration: "38:42" },
+            ].map((transcription) => (
+              <div 
+                key={transcription.id} 
+                className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 cursor-pointer transition-colors"
+                onClick={() => window.location.href = `/transcription/${transcription.id}`}
+              >
                 <div>
                   <h4 className="font-medium text-foreground">{transcription.title}</h4>
                   <p className="text-sm text-muted-foreground">{transcription.date}</p>
