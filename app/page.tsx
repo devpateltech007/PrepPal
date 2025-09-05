@@ -11,6 +11,7 @@ import { NotesManager } from "@/components/notes-manager"
 import AuthWrapper from "@/components/auth-wrapper"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
+import { useNotes } from "@/components/notes-provider"
 
 interface Note {
   id: string
@@ -22,8 +23,8 @@ interface Note {
   isStarred: boolean
   keyPoints: string[]
   summary: string
-  source: "recording" | "manual"
-  recordingId?: string
+  source: "transcription" | "manual"
+  transcriptionId?: string
 }
 
 interface Subject {
@@ -36,6 +37,7 @@ interface Subject {
 function PrepPalContent() {
   const router = useRouter()
   const { user, signOut } = useAuth()
+  const { notes, subjects } = useNotes()
 
   const handleLogout = async () => {
     try {
@@ -45,70 +47,6 @@ function PrepPalContent() {
       console.error("Failed to logout:", error)
     }
   }
-
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: "1",
-      title: "Algorithms - Big O Notation",
-      content:
-        "Big O notation describes the performance or complexity of an algorithm. It specifically describes the worst-case scenario, and can be used to describe the execution time required or the space used by an algorithm. Common complexities include O(1), O(log n), O(n), O(n log n), O(n²), and O(2^n).",
-      subject: "Computer Science",
-      tags: ["algorithms", "complexity", "big-o"],
-      date: "2024-12-05",
-      isStarred: true,
-      keyPoints: [
-        "Big O describes worst-case performance",
-        "Common complexities: O(1), O(log n), O(n), O(n²)",
-        "Used for both time and space complexity",
-      ],
-      summary: "Introduction to Big O notation and algorithm complexity analysis",
-      source: "recording",
-      recordingId: "rec-1",
-    },
-    {
-      id: "2",
-      title: "Linear Algebra - Matrix Operations",
-      content:
-        "Matrix multiplication is not commutative (AB ≠ BA in general). The identity matrix I has the property that AI = IA = A for any compatible matrix A. Matrix inverse A⁻¹ exists only for square matrices with non-zero determinant.",
-      subject: "Mathematics",
-      tags: ["matrices", "linear-algebra", "operations"],
-      date: "2024-12-04",
-      isStarred: false,
-      keyPoints: [
-        "Matrix multiplication is not commutative",
-        "Identity matrix: AI = IA = A",
-        "Inverse exists for non-singular square matrices",
-      ],
-      summary: "Fundamental properties of matrix operations and inverses",
-      source: "recording",
-      recordingId: "rec-2",
-    },
-    {
-      id: "3",
-      title: "Quantum Mechanics - Wave-Particle Duality",
-      content:
-        "Light exhibits both wave and particle properties depending on the experimental setup. The double-slit experiment demonstrates this duality clearly. When observed, photons behave as particles; when unobserved, they behave as waves creating interference patterns.",
-      subject: "Physics",
-      tags: ["quantum", "wave-particle", "duality"],
-      date: "2024-12-03",
-      isStarred: true,
-      keyPoints: [
-        "Light has both wave and particle properties",
-        "Double-slit experiment demonstrates duality",
-        "Observation affects behavior",
-      ],
-      summary: "Understanding wave-particle duality in quantum mechanics",
-      source: "recording",
-      recordingId: "rec-3",
-    },
-  ])
-
-  const [subjects] = useState<Subject[]>([
-    { id: "cs", name: "Computer Science", color: "bg-blue-500", noteCount: 5 },
-    { id: "math", name: "Mathematics", color: "bg-green-500", noteCount: 3 },
-    { id: "physics", name: "Physics", color: "bg-purple-500", noteCount: 4 },
-    { id: "chemistry", name: "Chemistry", color: "bg-orange-500", noteCount: 2 },
-  ])
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,7 +98,7 @@ function PrepPalContent() {
           <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="record" className="flex items-center gap-2">
               <Mic className="w-4 h-4" />
-              Record
+              Transcribe
             </TabsTrigger>
             <TabsTrigger value="notes" className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
@@ -181,7 +119,7 @@ function PrepPalContent() {
           </TabsContent>
 
           <TabsContent value="notes">
-            <NotesManager notes={notes} subjects={subjects} onNotesChange={setNotes} />
+            <NotesManager notes={notes} subjects={subjects} onNotesChange={() => {}} />
           </TabsContent>
 
           <TabsContent value="timeline">
