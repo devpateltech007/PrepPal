@@ -97,7 +97,8 @@ async def create_transcription(
             "text": transcription.text,
             "duration": transcription.duration,
             "created": firestore.SERVER_TIMESTAMP,
-            "uid": uid
+            "uid": uid,
+            "subject":transcription.subject
         }
         
         # Add to Firestore
@@ -138,7 +139,8 @@ async def get_user_transcriptions(
                 text=data["text"],
                 duration=data["duration"],
                 created=format_timestamp(data["created"]),
-                uid=data["uid"]
+                uid=data["uid"],
+                subject=data["subject"]
             ))
         
         return transcriptions
@@ -170,7 +172,8 @@ async def get_transcription(
             text=data["text"],
             duration=data["duration"],
             created=format_timestamp(data["created"]),
-            uid=data["uid"]
+            uid=data["uid"],
+            subject=data["subject"]
         )
         
     except HTTPException:
@@ -226,7 +229,8 @@ async def update_transcription(
             text=data["text"],
             duration=data["duration"],
             created=format_timestamp(data["created"]),
-            uid=data["uid"]
+            uid=data["uid"],
+            subject=data["subject"]
         )
         
     except HTTPException:
