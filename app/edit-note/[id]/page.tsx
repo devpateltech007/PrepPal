@@ -23,8 +23,8 @@ interface Note {
   isStarred: boolean
   keyPoints: string[]
   summary: string
-  source: "recording" | "manual"
-  recordingId?: string
+  source: "transcription" | "manual"
+  transcriptionId?: string
 }
 
 interface Subject {
@@ -44,6 +44,7 @@ function EditNoteContent() {
   const [loading, setLoading] = useState(true)
   const [newTag, setNewTag] = useState("")
   const [newKeyPoint, setNewKeyPoint] = useState("")
+  const [customSubject, setCustomSubject] = useState("")
 
   useEffect(() => {
     const foundNote = getNoteById(noteId)
@@ -175,21 +176,37 @@ function EditNoteContent() {
 
               <div>
                 <Label htmlFor="subject">Subject</Label>
-                <Select
-                  value={note.subject}
-                  onValueChange={(value) => setNote({ ...note, subject: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subjects.map((subject) => (
-                      <SelectItem key={subject.id} value={subject.name}>
-                        {subject.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={note.subject}
+                    onValueChange={(value) => {
+                      setNote({ ...note, subject: value })
+                      setCustomSubject("")
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select a subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.name}>
+                          {subject.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder="Or enter custom subject"
+                    value={customSubject}
+                    onChange={(e) => {
+                      setCustomSubject(e.target.value)
+                      if (e.target.value) {
+                        setNote({ ...note, subject: e.target.value })
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                </div>
               </div>
 
               <div>
