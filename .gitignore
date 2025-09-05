@@ -222,3 +222,6 @@ yarn-error.log*
 .yarn-integrity
 
 .DS_Store
+
+
+auth-key.json
